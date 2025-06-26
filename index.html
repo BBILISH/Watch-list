@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>רשימת צפייה</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Google Fonts - Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    <!-- React & ReactDOM CDNs -->
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <!-- Babel for JSX transformation -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom scrollbar for better aesthetics */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #fce4ec; /* Light pink */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #f48fb1; /* Medium pink */
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #e91e63; /* Darker pink */
+        }
+        /* Ensure textarea expands with content but has a min-height */
+        .auto-resize-textarea {
+            min-height: 40px; /* Adjust as needed for initial visibility */
+            overflow: hidden; /* Hide scrollbar initially */
+            resize: vertical; /* Allow manual vertical resize */
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-pink-100 to-blue-100 min-h-screen flex items-center justify-center p-4 sm:p-6">
+
+    <div id="root" class="w-full max-w-xl bg-white bg-opacity-90 shadow-2xl rounded-3xl p-4 sm:p-6 space-y-4 transform transition-all duration-300 hover:scale-105"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        const App = () => {
+            // State for the watchlist, initialized from Local Storage
+            const [watchlist, setWatchlist] = useState(() => {
+                try {
+                    const savedWatchlist = localStorage.getItem('romanticWatchlistV2');
+                    return savedWatchlist ? JSON.parse(savedWatchlist) : [];
+                } catch (error) {
+                    console.error("Error loading watchlist from Local Storage:", error);
+                    return [];
+                }
+            });
+            const [newItemTitle, setNewItemTitle] = useState('');
+            const [newItemType, setNewItemType] = useState('movie');
+            const [newItemNote, setNewItemNote] = useState('');
+            const [newItemRating, setNewItemRating] = useState(0);
+            const [mainTab, setMainTab] = useState('add'); // New state for main tabs: 'add' or 'view'
+            const [viewTab, setViewTab] = useState('movies'); // State for view tabs: 'movies', 'shows', 'learning'
+
+            // Ref for auto-resizing textarea
+            const textareaRefs = useRef({});
+
+            // Save watchlist to Local Storage whenever it changes
+            useEffect(() => {
+                try {
+                    localStorage.setItem('romanticWatchlistV2', JSON.stringify(watchlist));
+                } catch (error) {
+                    console.error("Error saving watchlist to Local Storage:", error);
+                }
+            }, [watchlist]);
+
+            // Effect to auto-resize textareas when watchlist or activeTab changes
+            useEffect(() => {
+                watchlist.forEach(item => {
+                    const textarea = textareaRefs.current[item.id];
+                    if (textarea) {
+                        textarea.style.height = 'auto';
+                        textarea.style.height = textarea.scrollHeight + 'px';
+                    }
+                });
+            }, [watchlist, viewTab]); // Changed dependency to viewTab
+
+            // Function to add a new item to the watchlist
+            const handleAddItem = () => {
+                if (newItemTitle.trim() === '') {
+                    console.log('Please enter a title for the item.');
+                    return;
+                }
+
+                const newItem = {
+                    id: Date.now(),
+                    title: newItemTitle,
+                    type: newItemType,
+                    note: newItemNote,
+                    rating: newItemRating,
+                    watched: false,
+                    timestamp: Date.now(),
+                };
+
+                setWatchlist(prevWatchlist => [newItem, ...prevWatchlist]);
+                setNewItemTitle('');
+                setNewItemNote('');
+                setNewItemRating(0);
+                setMainTab('view'); // Switch to view tab after adding an item
+                setViewTab(newItemType === 'movie' ? 'movies' : newItemType === 'show' ? 'shows' : 'learning'); // Go to the relevant view tab
+            };
+
+            // Function to toggle the 'watched' status of an item
+            const handleToggleWatched = (id) => {
+                setWatchlist(prevWatchlist =>
+                    prevWatchlist.map(item =>
+                        item.id === id ? { ...item, watched: !item.watched } : item
+                    )
+                );
+            };
+
+            // Function to delete an item
+            const handleDeleteItem = (id) => {
+                setWatchlist(prevWatchlist => prevWatchlist.filter(item => item.id !== id));
+            };
+
+            // Function to update the note of an item
+            const handleUpdateNote = (id, newNote) => {
+                setWatchlist(prevWatchlist =>
+                    prevWatchlist.map(item =>
+                        item.id === id ? { ...item, note: newNote } : item
+                    )
+                );
+            };
+
+            // Function to update the rating of an item
+            const handleUpdateRating = (id, newRating) => {
+                setWatchlist(prevWatchlist =>
+                    prevWatchlist.map(item =>
+                        item.id === id ? { ...item, rating: parseInt(newRating) } : item
+                    )
+                );
+            };
+
+            // Filter watchlist items based on the active view tab
+            const filteredWatchlist = watchlist.filter(item => {
+                if (viewTab === 'movies') return item.type === 'movie';
+                if (viewTab === 'shows') return item.type === 'show';
+                if (viewTab === 'learning') return item.type === 'learning';
+                return true;
+            });
+
+            return (
+                <div className="w-full max-w-xl bg-white bg-opacity-90 shadow-2xl rounded-3xl p-4 sm:p-6 space-y-4 transform transition-all duration-300 hover:scale-105">
+                    <h1 className="text-3xl sm:text-4xl font-extrabold text-center text-pink-600 mb-6 drop-shadow-lg">
+                        רשימת צפייה
+                    </h1>
+
+                    {/* Main Tab Navigation (Add/View) */}
+                    <div className="flex justify-center mb-4 bg-pink-50 rounded-full p-1 shadow-inner">
+                        <button
+                            onClick={() => setMainTab('add')}
+                            className={`flex-1 py-2 px-3 rounded-full text-base sm:text-lg font-semibold transition-all duration-300
+                                ${mainTab === 'add' ? 'bg-pink-400 text-white shadow-md' : 'text-pink-600 hover:bg-pink-200'}`}
+                        >
+                            הוסף פריט ✨
+                        </button>
+                        <button
+                            onClick={() => setMainTab('view')}
+                            className={`flex-1 py-2 px-3 rounded-full text-base sm:text-lg font-semibold transition-all duration-300
+                                ${mainTab === 'view' ? 'bg-pink-400 text-white shadow-md' : 'text-pink-600 hover:bg-pink-200'}`}
+                        >
+                            צפה ברשימה 💖
+                        </button>
+                    </div>
+
+                    {/* Conditional Rendering based on mainTab */}
+                    {mainTab === 'add' && (
+                        <div className="flex flex-col gap-3 mb-4">
+                            <input
+                                type="text"
+                                className="w-full p-2 border-2 border-pink-200 rounded-lg focus:ring-3 focus:ring-pink-400 focus:border-transparent transition duration-300 placeholder-pink-300 text-gray-700"
+                                placeholder="הזן כותרת (סרט/סדרה/לימוד)"
+                                value={newItemTitle}
+                                onChange={(e) => setNewItemTitle(e.target.value)}
+                                onKeyPress={(e) => {
+                                    if (e.key === 'Enter') {
+                                        handleAddItem();
+                                    }
+                                }}
+                            />
+                            <textarea
+                                className="w-full p-2 border-2 border-pink-200 rounded-lg focus:ring-3 focus:ring-pink-400 focus:border-transparent transition duration-300 placeholder-pink-300 text-gray-700 resize-y"
+                                placeholder="הערות אישיות (אופציונלי)"
+                                rows="1"
+                                value={newItemNote}
+                                onChange={(e) => setNewItemNote(e.target.value)}
+                            ></textarea>
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <select
+                                    className="flex-grow p-2 border-2 border-pink-200 rounded-lg focus:ring-3 focus:ring-pink-400 focus:border-transparent transition duration-300 text-gray-700"
+                                    value={newItemType}
+                                    onChange={(e) => setNewItemType(e.target.value)}
+                                >
+                                    <option value="movie">סרט 🎬</option>
+                                    <option value="show">סדרה 📺</option>
+                                    <option value="learning">לימוד 📚</option>
+                                </select>
+                                <select
+                                    className="flex-grow p-2 border-2 border-pink-200 rounded-lg focus:ring-3 focus:ring-pink-400 focus:border-transparent transition duration-300 text-gray-700"
+                                    value={newItemRating}
+                                    onChange={(e) => setNewItemRating(e.target.value)}
+                                >
+                                    <option value="0">דרג (0 כוכבים)</option>
+                                    <option value="1">⭐ 1 כוכב</option>
+                                    <option value="2">⭐⭐ 2 כוכבים</option>
+                                    <option value="3">⭐⭐⭐ 3 כוכבים</option>
+                                    <option value="4">⭐⭐⭐⭐ 4 כוכבים</option>
+                                    <option value="5">⭐⭐⭐⭐⭐ 5 כוכבים</option>
+                                </select>
+                            </div>
+                            <button
+                                onClick={handleAddItem}
+                                className="w-full p-2 bg-pink-500 text-white rounded-lg shadow-lg hover:bg-pink-600 focus:outline-none focus:ring-3 focus:ring-pink-400 focus:ring-offset-2 transition duration-300 transform hover:scale-105 active:scale-95"
+                            >
+                                הוסף לרשימה ✨
+                            </button>
+                        </div>
+                    )}
+
+                    {mainTab === 'view' && (
+                        <>
+                            {/* View Tab Navigation (Movies/Shows/Learning) */}
+                            <div className="flex justify-center mb-4 bg-pink-50 rounded-full p-1 shadow-inner">
+                                <button
+                                    onClick={() => setViewTab('movies')}
+                                    className={`flex-1 py-2 px-3 rounded-full text-base sm:text-lg font-semibold transition-all duration-300
+                                        ${viewTab === 'movies' ? 'bg-pink-400 text-white shadow-md' : 'text-pink-600 hover:bg-pink-200'}`}
+                                >
+                                    סרטים 🎬
+                                </button>
+                                <button
+                                    onClick={() => setViewTab('shows')}
+                                    className={`flex-1 py-2 px-3 rounded-full text-base sm:text-lg font-semibold transition-all duration-300
+                                        ${viewTab === 'shows' ? 'bg-pink-400 text-white shadow-md' : 'text-pink-600 hover:bg-pink-200'}`}
+                                >
+                                    סדרות 📺
+                                </button>
+                                <button
+                                    onClick={() => setViewTab('learning')}
+                                    className={`flex-1 py-2 px-3 rounded-full text-base sm:text-lg font-semibold transition-all duration-300
+                                        ${viewTab === 'learning' ? 'bg-pink-400 text-white shadow-md' : 'text-pink-600 hover:bg-pink-200'}`}
+                                >
+                                    לימוד 📚
+                                </button>
+                            </div>
+
+                            {/* Watchlist Display */}
+                            <div className="space-y-3 max-h-80 overflow-y-auto pr-2">
+                                {filteredWatchlist.length === 0 ? (
+                                    <p className="text-center text-pink-400 text-lg py-6 font-semibold animate-pulse">
+                                        אין פריטים בקטגוריה זו. בואו נוסיף! 💖
+                                    </p>
+                                ) : (
+                                    filteredWatchlist.map((item) => (
+                                        <div
+                                            key={item.id}
+                                            className={`flex flex-col p-3 rounded-xl shadow-md transition duration-300 ease-in-out transform hover:scale-[1.01]
+                                              ${item.watched ? 'bg-green-100 border-l-4 border-green-400 opacity-80' : 'bg-white border-l-4 border-pink-400'}`}
+                                        >
+                                            <div className="flex items-center justify-between mb-1">
+                                                <h3 className={`text-base sm:text-lg font-bold ${item.watched ? 'text-gray-500 line-through' : 'text-gray-800'}`}>
+                                                    {item.title}
+                                                </h3>
+                                                <div className="flex items-center space-x-2 rtl:space-x-reverse">
+                                                    <button
+                                                        onClick={() => handleToggleWatched(item.id)}
+                                                        className={`p-1 rounded-full transition duration-200 transform hover:scale-125
+                                                          ${item.watched ? 'bg-yellow-400 hover:bg-yellow-500 text-white' : 'bg-green-400 hover:bg-green-500 text-white'}`}
+                                                        title={item.watched ? 'סמן כלא נצפה' : 'סמן כנצפה'}
+                                                    >
+                                                        {item.watched ? (
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                                            </svg>
+                                                        ) : (
+                                                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                                            </svg>
+                                                        )}
+                                                    </button>
+                                                    <button
+                                                        onClick={() => handleDeleteItem(item.id)}
+                                                        className="p-1 bg-red-400 text-white rounded-full shadow-md hover:bg-red-500 focus:outline-none focus:ring-2 focus:ring-red-300 focus:ring-offset-2 transition duration-200 transform hover:scale-125"
+                                                        title="מחק פריט"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                                            <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm6 0a1 1 0 11-2 0v6a1 1 0 112 0V8z" clipRule="evenodd" />
+                                                        </svg>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-center justify-between mb-1"> {/* This div holds type and rating */}
+                                                <p className="text-xs text-pink-500">
+                                                    {item.type === 'movie' ? 'סרט 🍿' : item.type === 'show' ? 'סדרה ✨' : 'לימוד 📚'}
+                                                </p>
+                                                {item.rating > 0 && (
+                                                    <span className="text-sm text-yellow-500">
+                                                        {Array(item.rating).fill().map((_, i) => <span key={i}>⭐</span>)}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <textarea
+                                                ref={el => textareaRefs.current[item.id] = el}
+                                                className={`auto-resize-textarea w-full p-1 text-xs border-2 rounded-lg focus:ring-2 focus:ring-pink-300 focus:border-transparent transition duration-200 text-gray-700 mb-1
+                                                    ${item.watched ? 'border-green-200 bg-green-50' : 'border-pink-200 bg-pink-50'}`}
+                                                placeholder="הוסף הערות כאן..."
+                                                value={item.note || ''}
+                                                onChange={(e) => handleUpdateNote(item.id, e.target.value)}
+                                                onInput={(e) => {
+                                                    e.target.style.height = 'auto';
+                                                    e.target.style.height = e.target.scrollHeight + 'px';
+                                                }}
+                                            ></textarea>
+                                            <select
+                                                className={`w-full p-1 text-xs border-2 rounded-lg focus:ring-2 focus:ring-pink-300 focus:border-transparent transition duration-200 text-gray-700
+                                                    ${item.watched ? 'border-green-200 bg-green-50' : 'border-pink-200 bg-pink-50'}`}
+                                                value={item.rating || 0}
+                                                onChange={(e) => handleUpdateRating(item.id, e.target.value)}
+                                            >
+                                                <option value="0">דרג (0 כוכבים)</option>
+                                                <option value="1">⭐ 1 כוכב</option>
+                                                <option value="2">⭐⭐ 2 כוכבים</option>
+                                                <option value="3">⭐⭐⭐ 3 כוכבים</option>
+                                                <option value="4">⭐⭐⭐⭐ 4 כוכבים</option>
+                                                <option value="5">⭐⭐⭐⭐⭐ 5 כוכבים</option>
+                                            </select>
+                                        </div>
+                                    ))
+                                )}
+                            </div>
+                        </>
+                    )}
+                </div>
+            );
+        };
+
+        // Render the React App
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
+
