@@ -66,7 +66,8 @@
             const [newItemNote, setNewItemNote] = useState('');
             const [newItemRating, setNewItemRating] = useState(0);
             const [mainTab, setMainTab] = useState('add'); // New state for main tabs: 'add' or 'view'
-            const [viewTab, setViewTab] = useState('movies'); // State for view tabs: 'movies', 'shows', 'learning'
+            // Updated viewTab state to include 'recipes'
+            const [viewTab, setViewTab] = useState('movies'); // State for view tabs: 'movies', 'shows', 'learning', 'recipes'
 
             // Ref for auto-resizing textarea
             const textareaRefs = useRef({});
@@ -113,7 +114,8 @@
                 setNewItemNote('');
                 setNewItemRating(0);
                 setMainTab('view'); // Switch to view tab after adding an item
-                setViewTab(newItemType === 'movie' ? 'movies' : newItemType === 'show' ? 'shows' : 'learning'); // Go to the relevant view tab
+                // Updated logic to go to the relevant view tab, including 'recipes'
+                setViewTab(newItemType === 'movie' ? 'movies' : newItemType === 'show' ? 'shows' : newItemType === 'learning' ? 'learning' : 'recipes');
             };
 
             // Function to toggle the 'watched' status of an item
@@ -153,6 +155,8 @@
                 if (viewTab === 'movies') return item.type === 'movie';
                 if (viewTab === 'shows') return item.type === 'show';
                 if (viewTab === 'learning') return item.type === 'learning';
+                // Added filtering for 'recipes'
+                if (viewTab === 'recipes') return item.type === 'recipe';
                 return true;
             });
 
@@ -186,7 +190,7 @@
                             <input
                                 type="text"
                                 className="w-full p-2 border-2 border-pink-200 rounded-lg focus:ring-3 focus:ring-pink-400 focus:border-transparent transition duration-300 placeholder-pink-300 text-gray-700"
-                                placeholder="הזן כותרת (סרט/סדרה/לימוד)"
+                                placeholder="הזן כותרת (סרט/סדרה/לימוד/מתכון)"
                                 value={newItemTitle}
                                 onChange={(e) => setNewItemTitle(e.target.value)}
                                 onKeyPress={(e) => {
@@ -211,6 +215,8 @@
                                     <option value="movie">סרט 🎬</option>
                                     <option value="show">סדרה 📺</option>
                                     <option value="learning">לימוד 📚</option>
+                                    {/* Added new option for 'recipe' */}
+                                    <option value="recipe">מתכון 🍲</option>
                                 </select>
                                 <select
                                     className="flex-grow p-2 border-2 border-pink-200 rounded-lg focus:ring-3 focus:ring-pink-400 focus:border-transparent transition duration-300 text-gray-700"
@@ -236,7 +242,7 @@
 
                     {mainTab === 'view' && (
                         <>
-                            {/* View Tab Navigation (Movies/Shows/Learning) */}
+                            {/* View Tab Navigation (Movies/Shows/Learning/Recipes) */}
                             <div className="flex justify-center mb-4 bg-pink-50 rounded-full p-1 shadow-inner">
                                 <button
                                     onClick={() => setViewTab('movies')}
@@ -258,6 +264,14 @@
                                         ${viewTab === 'learning' ? 'bg-pink-400 text-white shadow-md' : 'text-pink-600 hover:bg-pink-200'}`}
                                 >
                                     לימוד 📚
+                                </button>
+                                {/* Added new tab for 'recipes' */}
+                                <button
+                                    onClick={() => setViewTab('recipes')}
+                                    className={`flex-1 py-2 px-3 rounded-full text-base sm:text-lg font-semibold transition-all duration-300
+                                        ${viewTab === 'recipes' ? 'bg-pink-400 text-white shadow-md' : 'text-pink-600 hover:bg-pink-200'}`}
+                                >
+                                    מתכונים 🍲
                                 </button>
                             </div>
 
@@ -308,7 +322,8 @@
                                             </div>
                                             <div className="flex items-center justify-between mb-1"> {/* This div holds type and rating */}
                                                 <p className="text-xs text-pink-500">
-                                                    {item.type === 'movie' ? 'סרט 🍿' : item.type === 'show' ? 'סדרה ✨' : 'לימוד 📚'}
+                                                    {/* Updated display for item type */}
+                                                    {item.type === 'movie' ? 'סרט 🍿' : item.type === 'show' ? 'סדרה ✨' : item.type === 'learning' ? 'לימוד 📚' : 'מתכון 🍲'}
                                                 </p>
                                                 {item.rating > 0 && (
                                                     <span className="text-sm text-yellow-500">
